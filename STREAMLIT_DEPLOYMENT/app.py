@@ -1,71 +1,101 @@
 import streamlit as st
 import pandas as pd
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
-from sklearn.model_selection import train_test_split
+import pickle
+import matplotlib.pyplot as plt
+import seaborn as sns
 from sklearn.preprocessing import LabelEncoder
+import warnings
+warnings.filterwarnings("ignore")
 
-# Load the dataset
-data = pd.read_csv("provider_fraud_detection_data.csv")
+def main():
+    # st.title('Healthcare Provider Fraud Detector')
+    html_temp="""
+    <div style="background-color:teal;padding:10px">
+    <h2 style="color:white;text-align:center;">Healthcare Provider Fraud Detector App </h2>
+   """ 
+    # Render the HTML content
+    st.markdown(html_temp, unsafe_allow_html=True)
+    
+    # Upload CSV file
+    uploaded_file = st.file_uploader("Upload CSV file", type="csv")
+    
+    if uploaded_file is not None:
+        # Read the uploaded file as a DataFrame
+        df = pd.read_csv(uploaded_file)
+        
+        # Perform preprocessing on the data
+        processed_data = preprocess_data(df)
+        
+        # Load the trained model
+        with open('xgboost_model_reduced_features.pkl', 'rb') as file:
+            model = pickle.load(file)
+        
+        # Make predictions
+        predictions = model.predict(processed_data)
+        
+        # Count fraudulent activities
+        fraud_count = sum(predictions)
+        
+        # Calculate percentages
+        total_samples = len(predictions)
+        fraud_percentage = (fraud_count / total_samples) * 100
+        
+        # Display the predicted output
+        st.write("Predicted Output:")
+        st.write(predictions)
+        
+        # Display the fraudulent activity count and percentage
+        st.write("Fraudulent Activities:")
+        st.write("Count:", fraud_count)
+        st.write("Percentage:", fraud_percentage, "%")
+        
+        # Get the rows with fraudulent activities
+        fraud_rows = df[predictions == 1]
+        
+        # Display the fraudulent rows
+        if not fraud_rows.empty:
+            st.write("Fraudulent Rows:")
+            st.write(fraud_rows)
+        else:
+            st.write("No fraudulent activities detected.")
 
-# Preprocess the data
-label_encoder = LabelEncoder()
-data[''] = label_encoder.fit_transform(data[''])
+        # Plot a bar chart of fraudulent activities
+        plot_fraud_chart(predictions)
 
-# Split the data into train and test sets
-X = data.drop('', axis=1)
-y = data['']
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+        # Check if any fraudulent activities are detected
+        if fraud_count > 0:
+            # Display the "Predict" button
+            if st.button("Predict"):
+                # Perform any additional actions you want to take on button click
+                pass
 
-# Train the model
-model = RandomForestClassifier()
-model.fit(X_train, y_train)
+def preprocess_data(df):
+    # Perform preprocessing steps on the DataFrame
+    # Ensure that the preprocessing steps match those used during training
+    
+    # Identify categorical columns
+    categorical_cols = df.select_dtypes(include="object").columns
+    
+    # Encode categorical columns
+    for col in categorical_cols:
+        le = LabelEncoder()
+        df[col] = le.fit_transform(df[col])
+    
+    # Apply feature scaling if required
+    
+    return df
 
-# Define the app title and header
-st.title("Medical Fraud Detection")
-st.header("Fraud Prediction")
+def plot_fraud_chart(predictions):
+    # Create a DataFrame for plotting
+    df = pd.DataFrame(predictions, columns=["Fraudulent"])
+    
+    # Plot a bar chart
+    plt.figure(figsize=(8, 6))
+    sns.countplot(data=df, x="Fraudulent")
+    plt.title("Fraudulent Activities")
+    plt.xlabel("Fraudulent")
+    plt.ylabel("Count")
+    st.pyplot()
 
-# Add input fields for user input
-patient_id = st.text_input("Patient ID")
-claim_amount = st.number_input("Claim Amount")
-provider_id = st.text_input("Provider ID")
-age = st.number_input("Age")
-is_inpatient = st.selectbox("Is Inpatient", ["Yes", "No"])
-is_outpatient = st.selectbox("Is Outpatient", ["Yes", "No"])
-
-# Create a dictionary from user input
-input_data = {
-    'patient_id': [patient_id],
-    'claim_amount': [claim_amount],
-    'provider_id': [provider_id],
-    'age': [age],
-    'is_inpatient': [is_inpatient],
-    'is_outpatient': [is_outpatient]
-}
-
-# Create a DataFrame from the input data
-input_df = pd.DataFrame(input_data)
-
-# Make predictions on user input
-prediction = model.predict(input_df)[0]
-
-# Convert prediction label back to original class
-prediction_label = label_encoder.inverse_transform([prediction])[0]
-
-# Display the prediction result
-st.subheader("Prediction Result")
-st.write(f"The predicted fraud label for the input is: {prediction_label}")
-
-# Evaluate the model
-test_preds = model.predict(X_test)
-accuracy = accuracy_score(y_test, test_preds)
-precision = precision_score(y_test, test_preds)
-recall = recall_score(y_test, test_preds)
-f1 = f1_score(y_test, test_preds)
-
-# Display the evaluation metrics
-st.header("Model Evaluation")
-st.subheader("Accuracy: {:.2%}".format(accuracy))
-st.subheader("Precision: {:.2%}".format(precision))
-st.subheader("Recall: {:.2%}".format(recall))
-st.subheader("F1 Score: {:.2%}".format(f1))
+if __name__ == "__main__":
+    main()
