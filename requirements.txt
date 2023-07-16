@@ -111,8 +111,8 @@ macaroonbakery==1.3.1
 Mako==1.1.0
 markdown-it-py==2.2.0
 MarkupSafe==2.1.2
-matplotlib==3.7.1
-matplotlib-inline==0.1.6
+matplotlib
+matplotlib-inline
 mdurl==0.1.2
 missingno==0.5.2
 mistune==2.0.5
