@@ -9,5 +9,4 @@ seaborn
 sklearn
 streamlit
 xgboost
-base64
 pickle
